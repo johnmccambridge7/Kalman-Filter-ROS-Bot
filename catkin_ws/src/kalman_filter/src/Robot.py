@@ -52,7 +52,13 @@ class Robot:
 		B = np.dot(delta_t, np.eye(1))
 		Q = [[1]]
 
-		print(self.prediction(x_initial, p_initial, linear_velocity, A, B, Q))
+		x_priori, prediction_priori = self.prediction(x_initial, p_initial, linear_velocity, A, B, Q)
+
+		z_k = 0.5
+		C = [[1]]
+		R = [[1]]
+
+		x_postori, prediction_postori = self.update(x_priori, prediction_priori, C, R)
 		# print(self.prediction([[0]], [[1000]], [[1.0]], [[1]], [[0]], [[0.5]]))
 		"""while not rospy.is_shutdown():
 			print("Robot is running...")
