@@ -1,0 +1,8 @@
+prefix=/home/husarion/mccambridge-cs69/pset-2/catkin_ws/install
+
+Name: kalman_filter
+Description: Description of kalman_filter
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/husarion/mccambridge-cs69/pset-2/catkin_ws/install/lib 
+Requires: 
