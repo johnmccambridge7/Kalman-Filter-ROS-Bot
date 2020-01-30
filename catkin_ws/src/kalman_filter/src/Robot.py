@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import rospy
 import numpy as np
-import maplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist, PoseStamped
 
@@ -26,19 +26,13 @@ class Robot:
 	2. Update given the prediction, updates the estimate and uncertainty
 	"""
 	# Prediction:
-	# Input: dt (delta time between states), x_k_1 (previous estimation of x), u_k (linear velocity),
-	# F (n x n matrix describing change of step between steps),
-	# Q (matrix of measurement noise)
-	def predict(self, x_k_1, p_k_1, u_k, F, Q, B):
-		self.x_pred = np.dot(F, x_k_1) + np.dot(Q, u_k)
-		self.P_uncertainty = np.dot(F, p_k_1, np.transpose(F)) + Q
-
 	def prediction(self, x_k_1, p_k_1, u_k, A, B, Q):
 		x_priori = np.dot(A, x_k_1) + np.dot(B, u_k)
 		prediction_priori = np.dot(np.dot(A, p_k_1), np.transpose(A)) + Q
 
 		return (x_priori, prediction_priori)
 
+	# Updating:
 	def update(self, x_priori, prediction_priori, z_k, C, R):
 		kalman_gain = np.dot(prediction_priori, np.transpose(C)) + 1/(np.dot(np.dot(C, prediction_priori), np.transpose(C)) + R)
 		x_postori = x_priori + np.dot(kalman_gain, (z_k - np.dot(C, x_priori)))
@@ -48,6 +42,23 @@ class Robot:
 
 	def start(self):
 		print("Robot is starting up...")
-		while not rospy.is_shutdown():
+
+		x_initial = 0
+		p_initial = [[1000]]
+
+		delta_t = 1.0
+		linear_velocity = 1.0
+		A = [[1]]
+		B = np.dot(delta_t, np.eye(1))
+		Q = [[1]]
+
+		print(self.prediction(x_initial, p_initial, linear_velocity, A, B, Q))
+		# print(self.prediction([[0]], [[1000]], [[1.0]], [[1]], [[0]], [[0.5]]))
+		"""while not rospy.is_shutdown():
 			print("Robot is running...")
-			rospy.sleep(0.1)
+			rospy.sleep(0.1)"""
+
+if __name__ == '__main__':
+	rospy.init_node('kalman_filter')
+	robot = Robot()
+	robot.start()
