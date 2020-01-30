@@ -2,6 +2,7 @@
 import rospy
 import numpy as np
 import matplotlib.pyplot as plt
+from numpy.linalg import inv
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist, PoseStamped
 
@@ -34,9 +35,20 @@ class Robot:
 
 	# Updating:
 	def update(self, x_priori, prediction_priori, z_k, C, R):
-		kalman_gain = np.dot(prediction_priori, np.transpose(C)) + 1/(np.dot(np.dot(C, prediction_priori), np.transpose(C)) + R)
+		covariance = np.dot(np.dot(C, prediction_priori), np.transpose(C)) + R
+		covariance_inverse = inv(covariance)
+
+		kalman_gain = np.dot(np.dot(prediction_priori, np.transpose(C)), covariance_inverse)
+		print("Kalman Gain: " + str(kalman_gain))
 		x_postori = x_priori + np.dot(kalman_gain, (z_k - np.dot(C, x_priori)))
-		prediction_postori = prediction_priori + np.dot(np.dot(kalman_gain, C), prediction_priori)
+
+		J = np.eye(1) - np.dot(kalman_gain, C)
+
+		prediction_postori = np.dot(J, prediction_priori)
+
+		print(J)
+		print("previous: " + str(prediction_priori))
+
 
 		return (x_postori, prediction_postori)
 
@@ -52,13 +64,15 @@ class Robot:
 		B = np.dot(delta_t, np.eye(1))
 		Q = [[1]]
 
-		x_priori, prediction_priori = self.prediction(x_initial, p_initial, linear_velocity, A, B, Q)
-
 		z_k = 0.5
-		C = [[1]]
-		R = [[1]]
+                C = [[1]]
+                R = [[1]]
 
-		x_postori, prediction_postori = self.update(x_priori, prediction_priori, C, R)
+		# for i in range(0, 20):
+		x_priori, prediction_priori = self.prediction(x_initial, p_initial, linear_velocity, A, B, Q)
+		x_postori, prediction_postori = self.update(x_priori, prediction_priori, z_k, C, R)
+		print((x_priori, prediction_priori))
+		print((x_postori, prediction_postori))
 		# print(self.prediction([[0]], [[1000]], [[1.0]], [[1]], [[0]], [[0.5]]))
 		"""while not rospy.is_shutdown():
 			print("Robot is running...")
