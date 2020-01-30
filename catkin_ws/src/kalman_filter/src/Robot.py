@@ -44,7 +44,8 @@ class Robot:
 
 		J = np.eye(1) - np.dot(kalman_gain, C)
 
-		prediction_postori = np.dot(J, prediction_priori)
+		prediction_postori = prediction_priori - np.dot(np.dot(np.dot(np.dot(prediction_priori, np.transpose(C)), covariance_inverse),C), prediction_priori)
+		#np.dot(J, prediction_priori)
 
 		print(J)
 		print("previous: " + str(prediction_priori))
