@@ -9,27 +9,42 @@ from geometry_msgs.msg import Twist, PoseStamped
 
 class Robot:
 	def __init__(self):
-		self.linear_velocity = [[1.0]]
+		self.linear_velocity = 1.0
 		self.x_pred = float("inf")
 		self.P_uncertainty = float("inf")
 
-		self.x_initial = [[0]]
-		self.p_initial = [[5000]]
+		self.x_initial = 0
+		self.p_initial = [[1000]]
+		self.distance_to_wall = 2.0
+		self.initial_z = 0.0
+
+		delta_t = 0.1
+
+                self.F = [[1]]
+                self.B = np.dot(delta_t, np.eye(1))
+                self.Q = [[1]]
+
+                # z_k = 2.0 - self.distance_to_wall  # observation
+                self.H = [[1]]
+                self.R = [[1]]
+
+		# get the initial estimates of the kalman filter setup
+		self.x_priori, self.prediction_priori = self.prediction(self.x_initial, self.p_initial, self.linear_velocity, self.F, self.B, self.Q)
+                self.x_postori, self.prediction_postori = self.update(self.x_priori, self.prediction_priori, self.initial_z, self.H, self.R)
 
 		self.cmd_vel = rospy.Publisher('/cmd_vel', Twist, queue_size=0)
 		self.scan = rospy.Subscriber('/scan', LaserScan, self.scan_callback)
-		# self.pose = rospy.Subscriber('/pose', PoseStamped, self.getCoordinate)
+		self.pose = rospy.Subscriber('/pose', PoseStamped, self.getCoordinate)
+
 		rospy.sleep(1)
 
 	def scan_callback(self, data):
 		front_scan = data.ranges[0]
 		print(front_scan)
-		"""front_scan_2 = data.ranges[num_measurements - 30:num_measurements]
-		front_scan = front_scan_1 + front_scan_2
-
-		for i in front_scan:
-			if i != "inf":
-				print(str(i) + "m")"""
+		if front_scan < 2.0:
+			self.distance_to_wall = front_scan
+			# start kalman filter prediction
+			print(self.distance_to_wall)
 
 	def getCoordinate(self, message):
 		pass
@@ -56,7 +71,7 @@ class Robot:
 		error = z_k - np.dot(H, x_priori)
 		x_postori = x_priori + np.dot(kalman_gain, error)
 
-		print("Error: " + str(error))
+		# print("Error: " + str(error))
 
 		J = np.eye(1) - np.dot(kalman_gain, H)
 
@@ -67,40 +82,29 @@ class Robot:
 	def start(self):
 		print("Robot is starting up...")
 
-		x_initial = 0
-		p_initial = [[1000]]
+		z_k = 2.0 - self.distance_to_wall  # observation
 
-		delta_t = 0.1 #1.0
-		linear_velocity = 0.1
-		F = [[1]]
-		B = np.dot(delta_t, np.eye(1))
-		Q = [[1]]
+		# print("~ Initial Cycle ~")
+                # print((self.x_priori, self.prediction_priori))
+                # print((self.x_postori, self.prediction_postori))
 
-		z_k = 1.90  # observation
-                H = [[1]]
-                R = [[1]]
+		# self.x_priori, self.prediction_priori = self.prediction(self.x_postori, self.prediction_postori, self.linear_velocity, self.F, self.B, self.Q)
+		# self.x_postori, self.prediction_postori = self.update(self.x_priori, self.prediction_priori, z_k, self.H, self.R)
 
-		x_priori, prediction_priori = self.prediction(x_initial, p_initial, linear_velocity, F, B, Q)
-		x_postori, prediction_postori = self.update(x_priori, prediction_priori, z_k, H, R)
-
-		print((x_priori, prediction_priori))
-		print((x_postori, prediction_postori))
+		cycle = 1
 
 		while not rospy.is_shutdown():
-			rospy.sleep(0.5)
+	                """z_k = 2.0 - self.distance_to_wall  # observation
 
-		"""for i in range(0, 10):
-		      z_k -= 0.10
-  	              x_priori, prediction_priori = self.prediction(x_postori, prediction_postori, linear_velocity, F, B, Q)
-	              x_postori, prediction_postori = self.update(x_priori, prediction_priori, z_k, H, R)
-		      print("~~~ New Cycle: ~~~")
-		      print("\n")
-		      print("Observation: " + str(z_k) + "m")
-		      print("Kalman Filter Output" + str(x_postori) + "m - with " + str(prediction_postori[0][0]) + " covariance")
-		      print("\n")
-		      # print((x_priori, prediction_priori))
-                      # print((x_postori, prediction_postori))
-		      time.sleep(2)"""
+			print("~ Cycle: "+ str(cycle) +"  ~ " + str(z_k))
+			self.x_priori, self.prediction_priori = self.prediction(self.x_postori, self.prediction_postori, self.linear_velocity, self.F, self.B, self.Q)
+                	self.x_postori, self.prediction_postori = self.update(self.x_priori, self.prediction_priori, z_k, self.H, self.R)
+			cycle += 1
+			print((self.x_priori, self.prediction_priori))
+                	print((self.x_postori, self.prediction_postori))
+			print("")"""
+			cycle += 1
+			rospy.sleep(0.5)
 
 if __name__ == '__main__':
 	rospy.init_node('kalman_filter')
