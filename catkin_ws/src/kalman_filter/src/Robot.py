@@ -40,7 +40,6 @@ class Robot:
 
 	def scan_callback(self, data):
 		front_scan = data.ranges[0]
-		print(front_scan)
 		if front_scan < 2.0:
 			self.distance_to_wall = front_scan
 			# start kalman filter prediction
@@ -94,16 +93,20 @@ class Robot:
 		cycle = 1
 
 		while not rospy.is_shutdown():
-	                """z_k = 2.0 - self.distance_to_wall  # observation
-
+	                z_k = 2.0 - self.distance_to_wall  # observation
+			print("")
 			print("~ Cycle: "+ str(cycle) +"  ~ " + str(z_k))
 			self.x_priori, self.prediction_priori = self.prediction(self.x_postori, self.prediction_postori, self.linear_velocity, self.F, self.B, self.Q)
                 	self.x_postori, self.prediction_postori = self.update(self.x_priori, self.prediction_priori, z_k, self.H, self.R)
+
+			print("X Calc: " + str(z_k) + "m")
+			print("X Estimation: " + str(self.x_postori[0][0]) + "m - covariance: " + str(self.prediction_postori[0][0]))
+
 			cycle += 1
-			print((self.x_priori, self.prediction_priori))
-                	print((self.x_postori, self.prediction_postori))
-			print("")"""
-			cycle += 1
+			# print((self.x_priori, self.prediction_priori))
+                	# print((self.x_postori, self.prediction_postori))
+			# print("")
+			# cycle += 1
 			rospy.sleep(0.5)
 
 if __name__ == '__main__':
