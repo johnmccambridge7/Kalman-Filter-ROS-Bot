@@ -9,7 +9,7 @@ from geometry_msgs.msg import Twist, PoseStamped
 
 class Robot:
 	def __init__(self):
-		self.linear_velocity = 1.0
+		self.linear_velocity = 0.2
 		self.x_pred = float("inf")
 		self.P_uncertainty = float("inf")
 
@@ -18,10 +18,11 @@ class Robot:
 		self.distance_to_wall = 2.0
 		self.initial_z = 0.0
 
-		delta_t = 0.1
+		self.delta_t = 0.1
+		self.current_time = rospy.get_time()
 
                 self.F = [[1]]
-                self.B = np.dot(delta_t, np.eye(1))
+                self.B = np.dot(self.delta_t, np.eye(1))
                 self.Q = [[1]]
 
                 # z_k = 2.0 - self.distance_to_wall  # observation
@@ -32,21 +33,26 @@ class Robot:
 		self.x_priori, self.prediction_priori = self.prediction(self.x_initial, self.p_initial, self.linear_velocity, self.F, self.B, self.Q)
                 self.x_postori, self.prediction_postori = self.update(self.x_priori, self.prediction_priori, self.initial_z, self.H, self.R)
 
-		self.cmd_vel = rospy.Publisher('/cmd_vel', Twist, queue_size=0)
+		self.cmd_vel = rospy.Subscriber('/cmd_vel', Twist, self.velocity_callback)
 		self.scan = rospy.Subscriber('/scan', LaserScan, self.scan_callback)
 		self.pose = rospy.Subscriber('/pose', PoseStamped, self.getCoordinate)
 
 		rospy.sleep(1)
+
+	def velocity_callback(self, data):
+		self.linear_velocity = data.linear.x
 
 	def scan_callback(self, data):
 		front_scan = data.ranges[0]
 		if front_scan < 2.0:
 			self.distance_to_wall = front_scan
 			# start kalman filter prediction
-			print(self.distance_to_wall)
+			# print(self.distance_to_wall)
 
 	def getCoordinate(self, message):
-		pass
+		self.delta_t = (rospy.get_time() - self.current_time)
+		# print("delta t: " + str(self.delta_t))
+		self.current_time = rospy.get_time()
 
 	"""
 	Kalman Filter Algorithm for State Estimation
@@ -83,17 +89,10 @@ class Robot:
 
 		z_k = 2.0 - self.distance_to_wall  # observation
 
-		# print("~ Initial Cycle ~")
-                # print((self.x_priori, self.prediction_priori))
-                # print((self.x_postori, self.prediction_postori))
-
-		# self.x_priori, self.prediction_priori = self.prediction(self.x_postori, self.prediction_postori, self.linear_velocity, self.F, self.B, self.Q)
-		# self.x_postori, self.prediction_postori = self.update(self.x_priori, self.prediction_priori, z_k, self.H, self.R)
-
 		cycle = 1
 
 		while not rospy.is_shutdown():
-	                z_k = 2.0 - self.distance_to_wall  # observation
+	                """z_k = 2.0 - self.distance_to_wall  # observation
 			print("")
 			print("~ Cycle: "+ str(cycle) +"  ~ " + str(z_k))
 			self.x_priori, self.prediction_priori = self.prediction(self.x_postori, self.prediction_postori, self.linear_velocity, self.F, self.B, self.Q)
@@ -102,11 +101,10 @@ class Robot:
 			print("X Calc: " + str(z_k) + "m")
 			print("X Estimation: " + str(self.x_postori[0][0]) + "m - covariance: " + str(self.prediction_postori[0][0]))
 
-			cycle += 1
+			cycle += 1"""
 			# print((self.x_priori, self.prediction_priori))
                 	# print((self.x_postori, self.prediction_postori))
 			# print("")
-			# cycle += 1
 			rospy.sleep(0.5)
 
 if __name__ == '__main__':
