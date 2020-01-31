@@ -18,6 +18,8 @@ class Robot:
 		self.distance_to_wall = 2.0
 		self.initial_z = 0.0
 
+		self.input_stream = "pose"
+
 		self.delta_t = 0.1
 		self.current_time = rospy.get_time()
 
@@ -27,6 +29,13 @@ class Robot:
 
                 self.H = [[1]]
                 self.R = [[1]]
+
+		# pose estimates
+		self.pose_x = 0
+
+		# coordinates for graphing
+		self.pose_coords = []
+		self.kalman_pose_coords = []
 
 		# get the initial estimates of the kalman filter setup
 		self.x_priori, self.prediction_priori = self.prediction(self.x_initial, self.p_initial, self.linear_velocity, self.F, self.B, self.Q)
@@ -53,6 +62,9 @@ class Robot:
 		self.delta_t = (rospy.get_time() - self.current_time)
 		# print("delta t: " + str(self.delta_t))
 		self.current_time = rospy.get_time()
+		self.pose_x = message.pose.position.x
+		# self.pose_coords.append((message.pose.position.x, message.pose.position.y))
+
 
 	def publish_estimate_message(self, information):
 		ps = PoseWithCovarianceStamped()
@@ -66,7 +78,7 @@ class Robot:
 		ps.pose.pose.position.y = position['y']
 		ps.pose.pose.position.z = position['z']
 
-		ps.pose.covariance = [covariance,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] # covariance
+		ps.pose.covariance = [float(covariance),0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] # covariance
 
 		self.estimated_pose.publish(ps)
 
@@ -106,16 +118,21 @@ class Robot:
 		z_k = 2.0 - self.distance_to_wall  # observation
 
 		cycle = 1
+		maximum_cycles = 25
 
-		while not rospy.is_shutdown():
+		while not rospy.is_shutdown() and cycle < maximum_cycles:
 	                z_k = 2.0 - self.distance_to_wall  # observation
 			print("")
-			print("~ Cycle: "+ str(cycle) +"  ~ " + str(z_k))
+			print("~ Cycle: "+ str(cycle) +" ~")
 			self.x_priori, self.prediction_priori = self.prediction(self.x_postori, self.prediction_postori, self.linear_velocity, self.F, self.B, self.Q)
                 	self.x_postori, self.prediction_postori = self.update(self.x_priori, self.prediction_priori, z_k, self.H, self.R)
 
 			print("X Calc: " + str(z_k) + "m")
 			print("X Estimation: " + str(self.x_postori[0][0]) + "m - covariance: " + str(self.prediction_postori[0][0]))
+
+			# add the kalman pose to the coordinates
+			self.kalman_pose_coords.append((self.x_postori[0][0], 5))
+			self.pose_coords.append((self.pose_x, 5))
 
 			node_information = {
 				"pose": {
@@ -123,17 +140,19 @@ class Robot:
 					"y": 0,
 					"z": 0
 				},
-				"covariance": [self.prediction_postori[0][0]]
+				"covariance": self.prediction_postori[0][0]
 			}
 
 			self.publish_estimate_message(node_information)
 
 			cycle += 1
-
-			# print((self.x_priori, self.prediction_priori))
-                	# print((self.x_postori, self.prediction_postori))
-			# print("")
 			rospy.sleep(0.5)
+
+		# print("Pose coord: " + str(len(self.pose_coords)))
+		# print("Kalman coord: " + str(len(self.kalman_pose_coords)))
+
+		plt.scatter(*zip(*self.kalman_pose_coords))
+		plt.show()
 
 if __name__ == '__main__':
 	rospy.init_node('kalman_filter')
