@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import time
 from numpy.linalg import inv
 from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import Twist, PoseStamped
+from geometry_msgs.msg import Twist, PoseStamped, PoseWithCovarianceStamped
 
 class Robot:
 	def __init__(self):
@@ -25,7 +25,6 @@ class Robot:
                 self.B = np.dot(self.delta_t, np.eye(1))
                 self.Q = [[1]]
 
-                # z_k = 2.0 - self.distance_to_wall  # observation
                 self.H = [[1]]
                 self.R = [[1]]
 
@@ -37,6 +36,8 @@ class Robot:
 		self.scan = rospy.Subscriber('/scan', LaserScan, self.scan_callback)
 		self.pose = rospy.Subscriber('/pose', PoseStamped, self.getCoordinate)
 
+		self.estimated_pose = rospy.Publisher('/estimated_pose', PoseWithCovarianceStamped, queue_size=0)
+
 		rospy.sleep(1)
 
 	def velocity_callback(self, data):
@@ -46,13 +47,28 @@ class Robot:
 		front_scan = data.ranges[0]
 		if front_scan < 2.0:
 			self.distance_to_wall = front_scan
-			# start kalman filter prediction
 			# print(self.distance_to_wall)
 
 	def getCoordinate(self, message):
 		self.delta_t = (rospy.get_time() - self.current_time)
 		# print("delta t: " + str(self.delta_t))
 		self.current_time = rospy.get_time()
+
+	def publish_estimate_message(self, information):
+		ps = PoseWithCovarianceStamped()
+		ps.header.frame_id = 'map'
+		ps.header.stamp = rospy.Time.now()
+
+		position = information['pose']
+		covariance = information['covariance']
+
+		ps.pose.pose.position.x = position['x']
+		ps.pose.pose.position.y = position['y']
+		ps.pose.pose.position.z = position['z']
+
+		ps.pose.covariance = [covariance,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] # covariance
+
+		self.estimated_pose.publish(ps)
 
 	"""
 	Kalman Filter Algorithm for State Estimation
@@ -92,7 +108,7 @@ class Robot:
 		cycle = 1
 
 		while not rospy.is_shutdown():
-	                """z_k = 2.0 - self.distance_to_wall  # observation
+	                z_k = 2.0 - self.distance_to_wall  # observation
 			print("")
 			print("~ Cycle: "+ str(cycle) +"  ~ " + str(z_k))
 			self.x_priori, self.prediction_priori = self.prediction(self.x_postori, self.prediction_postori, self.linear_velocity, self.F, self.B, self.Q)
@@ -101,7 +117,19 @@ class Robot:
 			print("X Calc: " + str(z_k) + "m")
 			print("X Estimation: " + str(self.x_postori[0][0]) + "m - covariance: " + str(self.prediction_postori[0][0]))
 
-			cycle += 1"""
+			node_information = {
+				"pose": {
+					"x": self.x_postori[0][0],
+					"y": 0,
+					"z": 0
+				},
+				"covariance": [self.prediction_postori[0][0]]
+			}
+
+			self.publish_estimate_message(node_information)
+
+			cycle += 1
+
 			# print((self.x_priori, self.prediction_priori))
                 	# print((self.x_postori, self.prediction_postori))
 			# print("")
