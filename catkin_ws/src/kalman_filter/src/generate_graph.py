@@ -84,3 +84,4 @@ class Graph:
 if __name__ == "__main__":
 	g = Graph()
 	g.drawError()
+	g.draw()
