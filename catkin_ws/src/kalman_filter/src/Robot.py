@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import rospy
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import time
@@ -9,7 +10,15 @@ from geometry_msgs.msg import Twist, PoseStamped, PoseWithCovarianceStamped
 
 class Robot:
 	def __init__(self):
-		self.linear_velocity = 0.2
+		if len(sys.argv) != 2:
+			print("Usage: Test.py [pose|cmd_vel] ~ specifies input type to kalman filter")
+			sys.exit()
+
+		if sys.argv != "pose" and sys.argv != "cmd_vel":
+			print("Invalid ~ Unknown topic supplied.")
+			sys.exit()
+
+		self.linear_velocity = 0.0
 		self.x_pred = float("inf")
 		self.P_uncertainty = float("inf")
 
@@ -21,6 +30,9 @@ class Robot:
 		self.input_stream = "pose"
 
 		self.delta_t = 0.1
+		self.delta_d = float("-inf")
+
+		self.current_d = 0;
 		self.current_time = rospy.get_time()
 
                 self.F = [[1]]
@@ -35,7 +47,7 @@ class Robot:
 
 		# coordinates for graphing
 		self.pose_coords = []
-		self.kalman_pose_coords = []
+		self.kalman_coords = []
 
 		# get the initial estimates of the kalman filter setup
 		self.x_priori, self.prediction_priori = self.prediction(self.x_initial, self.p_initial, self.linear_velocity, self.F, self.B, self.Q)
@@ -50,7 +62,8 @@ class Robot:
 		rospy.sleep(1)
 
 	def velocity_callback(self, data):
-		self.linear_velocity = data.linear.x
+		if self.input_stream == "cmd_vel":
+			self.linear_velocity = data.linear.x
 
 	def scan_callback(self, data):
 		front_scan = data.ranges[0]
@@ -59,8 +72,15 @@ class Robot:
 			# print(self.distance_to_wall)
 
 	def getCoordinate(self, message):
+		self.delta_d = (message.pose.position.x - self.pose_x)
 		self.delta_t = (rospy.get_time() - self.current_time)
 		# print("delta t: " + str(self.delta_t))
+		# print("delta distance: " + str(self.delta_d))
+
+		if self.input_stream == "pose":
+			self.linear_velocity = float(self.delta_d/self.delta_t)
+
+		# print("local linear vel: " + str(self.delta_d/self.delta_t))
 		self.current_time = rospy.get_time()
 		self.pose_x = message.pose.position.x
 		# self.pose_coords.append((message.pose.position.x, message.pose.position.y))
@@ -112,6 +132,10 @@ class Robot:
 
 		return (x_postori, prediction_postori)
 
+
+	def engage_filter(self, linear_velocity):
+		pass
+
 	def start(self):
 		print("Robot is starting up...")
 
@@ -131,8 +155,8 @@ class Robot:
 			print("X Estimation: " + str(self.x_postori[0][0]) + "m - covariance: " + str(self.prediction_postori[0][0]))
 
 			# add the kalman pose to the coordinates
-			self.kalman_pose_coords.append((self.x_postori[0][0], 5))
-			self.pose_coords.append((self.pose_x, 5))
+			self.kalman_coords.append((self.x_postori[0][0], 0))
+			self.pose_coords.append((self.pose_x, 0))
 
 			node_information = {
 				"pose": {
@@ -151,8 +175,22 @@ class Robot:
 		# print("Pose coord: " + str(len(self.pose_coords)))
 		# print("Kalman coord: " + str(len(self.kalman_pose_coords)))
 
-		plt.scatter(*zip(*self.kalman_pose_coords))
-		plt.show()
+		file_name = "kalman_with_pose_input_coords.txt"
+
+		if self.input_stream == "cmd_vel":
+			file_name = "kalman_with_cmd_vel_input_coords.txt"
+
+		file = open(file_name, "w")
+
+		for (x, y) in self.kalman_coords:
+			file.write(str(x) + "\t" + str(y) + "\n")
+
+
+		print("Successfully written coordinates to file.")
+		file.close()
+
+		# plt.scatter(*zip(*self.pose_coords))
+		# plt.show()
 
 if __name__ == '__main__':
 	rospy.init_node('kalman_filter')
