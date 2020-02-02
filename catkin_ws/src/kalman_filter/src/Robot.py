@@ -14,7 +14,7 @@ class Robot:
 			print("Usage: Test.py [pose|cmd_vel] ~ specifies input type to kalman filter")
 			sys.exit()
 
-		if sys.argv != "pose" and sys.argv != "cmd_vel":
+		if sys.argv[1] != "pose" and sys.argv[1] != "cmd_vel":
 			print("Invalid ~ Unknown topic supplied.")
 			sys.exit()
 
@@ -27,7 +27,7 @@ class Robot:
 		self.distance_to_wall = 2.0
 		self.initial_z = 0.0
 
-		self.input_stream = "pose"
+		self.input_stream = sys.argv[1]
 
 		self.delta_t = 0.1
 		self.delta_d = float("-inf")
@@ -186,7 +186,13 @@ class Robot:
 			file.write(str(x) + "\t" + str(y) + "\n")
 
 
+		raw_file = open("calculated_coords.txt", "w")
+		for (x, y) in self.pose_coords:
+			raw_file.write(str(x) + "\t" + str(y) + "\n")
+
+
 		print("Successfully written coordinates to file.")
+		raw_file.close()
 		file.close()
 
 		# plt.scatter(*zip(*self.pose_coords))
