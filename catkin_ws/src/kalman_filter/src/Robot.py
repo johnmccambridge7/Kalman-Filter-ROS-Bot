@@ -59,7 +59,7 @@ class Robot:
 
 		self.estimated_pose = rospy.Publisher('/estimated_pose', PoseWithCovarianceStamped, queue_size=0)
 
-		rospy.sleep(1)
+		rospy.sleep(2)
 
 	def velocity_callback(self, data):
 		if self.input_stream == "cmd_vel":
