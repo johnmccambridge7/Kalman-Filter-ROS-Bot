@@ -5,6 +5,10 @@ import math
 
 class Graph:
 	def __init__(self):
+		self.GROUND_TRUTH_INITIAL = 0.0 # measured starting point (robot reference frame)
+		self.GROUND_TRUTH_FINAL = 1.025 # measured ending point (robot reference frame)
+
+
 		self.raw_file = open("calculated_coords.txt").read().split("\n")
 		self.pose_file = open("kalman_with_pose_input_coords.txt").read().split("\n")
 		self.cmd_vel_file = open("kalman_with_cmd_vel_input_coords.txt").read().split("\n")
@@ -33,6 +37,20 @@ class Graph:
 				if float(data[0]) > 0:
 					self.calc_coords.append((data[0], data[1]))
 
+		# final coordinate from each of the filters and raw data
+		self.calc_end = [[self.calc_coords[-1][0],0]]
+		self.pose_end = [[self.pose_coords[-1][0],0]]
+		self.cv_end = [[self.cv_coords[-1][0], 0]]
+
+
+	def drawError(self):
+		# draws the graph of the start and end position of the robot relative to the ground truth
+		print("Constructing error graph...")
+		plt.plot(self.calc_end, 'bo')
+		plt.plot(self.pose_end, 'go')
+		plt.plot(self.cv_end, 'ro')
+		# print(self.cv_end)
+		plt.show()
 	def draw(self):
 		# draws the graph of the two kalman filters and the raw data
 		print("Constructing output graph...")
@@ -46,8 +64,7 @@ class Graph:
 
 		plt.legend(handles=[red, blue, green], loc='lower right')
 		plt.show()
-		pass
 
 if __name__ == "__main__":
 	g = Graph()
-	g.draw()
+	g.drawError()
