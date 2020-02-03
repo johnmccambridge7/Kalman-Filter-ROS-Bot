@@ -14,3 +14,7 @@ generate_graph.py : generates the graphs revealing the error and state estimatio
 ## Running Files
 
 Robot.py [pose|cmd_vel]: requires a topic to obtain the linear velocity from (either pose or cmd_vel)
+
+## Credits
+
+John McCambridge - Dartmouth College '22
