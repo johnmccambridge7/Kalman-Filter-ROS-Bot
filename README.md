@@ -2,8 +2,9 @@
 
 Provides a ROS packages for creating accurate state estimation for a ROS-bot traversing in a line.
 
-<img src="https://i.ibb.co/PthPgXv/Screen-Shot-2020-02-02-at-3-29-46-PM.png" width="100" />
-![Prediction and Update](https://i.ibb.co/yWPGDSF/Screen-Shot-2020-02-02-at-3-32-03-PM.png) ![Graph for Kalman Filter Output](https://i.ibb.co/PthPgXv/Screen-Shot-2020-02-02-at-3-29-46-PM.png)
+<img src="https://i.ibb.co/PthPgXv/Screen-Shot-2020-02-02-at-3-29-46-PM.png" width="350" />
+<img src="https://i.ibb.co/yWPGDSF/Screen-Shot-2020-02-02-at-3-32-03-PM.png" width="350" />
+
 # Files
 
 Robot.py [pose|cmd_vel] : stores all the kalman filter and ROS node logic and publishes a node with type PoseWithCovarianceStamped from the kalman filter.
